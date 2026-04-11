@@ -1,0 +1,176 @@
+"""CLI entry point using Click framework."""
+
+import logging
+import click
+
+try:
+    from rich.console import Console
+except ModuleNotFoundError:
+    class Console:  # type: ignore[no-redef]
+        def print(self, message: str) -> None:
+            print(message)
+
+from gic_cinema_booking import __version__
+from gic_cinema_booking.config import Config
+from gic_cinema_booking.services import BookingManager, greet, process_data
+
+console = Console()
+
+# Configure logging
+config = Config.from_env()
+logging.basicConfig(
+    level=logging.DEBUG if config.debug else logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s" if config.debug else "%(levelname)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@click.group(invoke_without_command=True)
+@click.version_option(version=__version__, prog_name="gic")
+@click.pass_context
+def app(ctx: click.Context) -> None:
+    """GIC Cinemas booking system."""
+    logger.info(f"Starting GIC Cinemas Booking System v{__version__} (debug={config.debug})")
+    if ctx.invoked_subcommand is None:
+        _run_interactive_menu()
+
+
+def _run_interactive_menu() -> None:
+    logger.debug("Starting interactive menu")
+    while True:
+        seat_map_input = click.prompt(
+            click.style("Please define movie title and seating map in [Title] [Row] [SeatsPerRow] format",
+            fg="cyan"),
+            default="",
+            show_default=False,
+        ).strip()
+        logger.debug(f"User input: {seat_map_input}")
+        if seat_map_input == "":
+            logger.debug("Empty input, continuing loop")
+            continue
+
+        parts = seat_map_input.split()
+        if len(parts) != 3:
+            logger.warning(f"Invalid input format: {seat_map_input}")
+            console.print("[red]Error:[/red] Please provide exactly 3 values.")
+            continue
+
+        movie_title = parts[0]
+        try:
+            rows = int(parts[1])
+            seats_per_row = int(parts[2])
+            logger.debug(f"Parsed: title={movie_title}, rows={rows}, seats_per_row={seats_per_row}")
+            if rows > 26:
+                logger.warning(f"Rows exceed limit: {rows}")
+                console.print("[red]Error:[/red] Maximum rows allowed 26. Please enter less than 26")
+                continue
+
+            if seats_per_row > 50:
+                logger.warning(f"Seats per row exceed limit: {seats_per_row}")
+                console.print("[red]Error:[/red] Maximum seats per row allowed 50. Please enter less than 50")
+                continue
+
+            bookings = BookingManager(title=movie_title, rows=rows, seats_per_row=seats_per_row)
+            logger.info(f"Created BookingManager for {movie_title} with {rows * seats_per_row} seats")
+        except ValueError as e:
+            logger.error(f"Value error parsing input: {e}")
+            console.print(f"[red]Error:[/red] {e}")
+            continue
+
+        _interactive_menu_options(bookings)
+        return
+
+
+def _interactive_menu_options(bookings: BookingManager) -> None:
+    logger.debug(f"Entering main menu for {bookings.title}")
+    while True:
+        console.print("\n[bold cyan]Welcome to GIC Cinemas[/bold cyan]")
+        console.print(f"[1] Book tickets for {bookings.title} ({bookings.available_tickets} seats available)")
+        console.print("[2] Check bookings")
+        console.print("[3] Exit")
+        choice = click.prompt(click.style("Please enter your selection", fg="cyan"), default="", show_default=False).strip()
+        logger.debug(f"Menu selection: {choice}")
+
+        if choice == "":
+            logger.debug("Empty selection, continuing loop")
+            continue
+        if choice == "1":
+            logger.debug("User selected Book tickets")
+            _interactive_book_tickets(bookings)
+        elif choice == "2":
+            logger.debug("User selected Check bookings")
+            _interactive_check_bookings(bookings)
+        elif choice == "3":
+            logger.info("User selected Exit")
+            console.print("[green]Thank you for using GIC Cinemas system. Bye![/green]")
+            return
+        else:
+            logger.warning(f"Invalid menu choice: {choice}")
+            console.print("[yellow]Invalid choice. Please select 1, 2, or 3.[/yellow]")
+
+
+def _interactive_book_tickets(bookings: BookingManager) -> None:
+    logger.debug("Entering ticket booking flow")
+    while True:
+        tickets = click.prompt(click.style("Enter number of tickets to book, or enter blank to go back to main menu", fg="cyan"), default="", show_default=False).strip()
+        logger.debug(f"Ticket input: {tickets}")
+        if not tickets:
+            logger.debug("Empty ticket input, returning to menu")
+            return
+
+        if not tickets.isdigit():
+            logger.warning(f"Invalid ticket number: {tickets}")
+            console.print(
+                f"[red]Enter a valid number of tickets "
+                f"({bookings.available_tickets} seats available).[/red]"
+            )
+            continue
+
+        if int(tickets) > bookings.available_tickets:
+            logger.warning(f"Requested tickets {tickets} exceed available {bookings.available_tickets}")
+            console.print(
+                f"[red]Only {bookings.available_tickets} seat(s) available.[/red]"
+            )
+            continue
+
+        try:
+            logger.info(f"Booking {tickets} tickets for {bookings.title}")
+            bookings.book_ticket(tickets=int(tickets))
+            logger.info("Booking completed successfully")
+            return
+        except ValueError as e:
+            logger.error(f"Booking failed: {e}")
+            console.print(f"[red]Error:[/red] {e}")
+            return
+
+
+def _interactive_check_bookings(bookings: BookingManager) -> None:
+    logger.debug("Entering booking check flow")
+    while True:
+        booking_id = click.prompt(
+            click.style("Enter booking id, or enter blank to go back to main menu", fg="cyan"), 
+            default="", show_default=False).strip()
+        logger.debug(f"Booking ID input: {booking_id}")
+        if booking_id == "":
+            logger.debug("Empty booking ID, returning to menu")
+            return
+
+        try:
+            allocated = bookings.get_booking(booking_id)
+            logger.debug(f"Retrieved booking: {booking_id}, seats: {allocated}")
+            if not allocated:
+                logger.warning(f"Booking not found: {booking_id}")
+                console.print(f"[red]Invalid booking id: {booking_id}.[/red]")
+                continue
+
+            seat_map = bookings.get_copy_all_bookings()
+            for r, c in allocated:
+                seat_map[r][c] = "o"
+
+            logger.info(f"Displaying booking {booking_id} with {len(allocated)} seats")
+            console.print(click.style(f"[bold]Booking id:[/bold] {booking_id}", fg="cyan"))
+            bookings.print_seats(booking_id, len(allocated), seat_map)
+            break
+        except ValueError as e:
+            logger.error(f"Error checking booking: {e}")
+            console.print(f"[red]Error:[/red] {e}")

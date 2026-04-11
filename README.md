@@ -58,6 +58,11 @@ Run the interactive cinema booking system:
 gic
 ```
 
+### Run with debug logs
+```bash
+CLI_DEBUG=true gic
+```
+
 ### Application Flow
 
 **1. Initial Setup**
