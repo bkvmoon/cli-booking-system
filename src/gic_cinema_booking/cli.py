@@ -100,14 +100,14 @@ def _run_interactive_menu() -> None:
             if rows > 26:
                 logger.warning(f"Rows exceed limit: {rows}")
                 console.print(
-                    "[red]Error:[/red] Maximum rows allowed 26. Please enter less than 26"
+                    "[red]Error:[/red] Maximum rows allowed [red]26[/red]. Please enter less than [red]26[/red]"
                 )
                 continue
 
             if seats_per_row > 50:
                 logger.warning(f"Seats per row exceed limit: {seats_per_row}")
                 console.print(
-                    "[red]Error:[/red] Maximum seats per row allowed 50. Please enter less than 50"
+                    "[red]Error:[/red] Maximum seats per row allowed [red]50[/red]. Please enter less than[red]50[/red]"
                 )
                 continue
 
