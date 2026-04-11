@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-import logging
-import click
 import copy
 import csv
 import json
+import logging
 from pathlib import Path
+
+import click
 
 try:
     from rich.console import Console
 except ModuleNotFoundError:
+
     class Console:  # type: ignore[no-redef]
         def print(self, message: str) -> None:
             print(message)
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +26,13 @@ class BookingManager:
     """In-memory booking manager for movie seats."""
 
     def __init__(self, title: str, rows: int, seats_per_row: int) -> None:
-        logger.debug(f"Initializing BookingManager: title={title}, rows={rows}, seats_per_row={seats_per_row}")
+        logger.debug(
+            f"Initializing BookingManager: title={title}, rows={rows}, seats_per_row={seats_per_row}"
+        )
         if rows < 1 or seats_per_row < 1:
-            logger.error(f"Invalid dimensions: rows={rows}, seats_per_row={seats_per_row}")
+            logger.error(
+                f"Invalid dimensions: rows={rows}, seats_per_row={seats_per_row}"
+            )
             raise ValueError("Rows and seats per row must be at least 1")
         self.title = title
         self.rows = rows
@@ -34,7 +41,9 @@ class BookingManager:
         self.map = [["." for _ in range(seats_per_row)] for _ in range(rows)]
         self.bookings: dict[str, list[tuple[int, int]]] = {}
         self.console = Console()
-        logger.info(f"BookingManager initialized with {self.available_tickets} total seats")
+        logger.info(
+            f"BookingManager initialized with {self.available_tickets} total seats"
+        )
 
     def get_booking(self, booking_id: str) -> list[tuple[int, int]] | None:
         return self.bookings.get(booking_id)
@@ -49,15 +58,17 @@ class BookingManager:
         while True:
             allocated, copy_map = self.find_default_seats(tickets)
             booking_id = f"GIC{len(self.bookings) + 1:04d}"
-            logger.debug(f"Generated booking ID: {booking_id}, allocated seats: {allocated}")
+            logger.debug(
+                f"Generated booking ID: {booking_id}, allocated seats: {allocated}"
+            )
             print(f"Successfully reserved {tickets} {self.title} tickets.")
             print(f"Booking id: {booking_id} {self.title} tickets.")
             self.print_seats(booking_id, tickets, copy_map)
 
             selected_seat = click.prompt(
                 click.style(
-                    "Enter blank to accept seat selection, or enter new seating position", 
-                    fg="cyan"
+                    "Enter blank to accept seat selection, or enter new seating position",
+                    fg="cyan",
                 ),
                 default="",
                 show_default=False,
@@ -69,7 +80,9 @@ class BookingManager:
                 self.confirm_booking(allocated)
                 self.bookings[booking_id] = allocated
                 self.available_tickets -= tickets
-                logger.info(f"Booking {booking_id} confirmed with {len(allocated)} seats, {self.available_tickets} remaining")
+                logger.info(
+                    f"Booking {booking_id} confirmed with {len(allocated)} seats, {self.available_tickets} remaining"
+                )
                 print(f"Booking id: {booking_id} confirmed.")
                 break
 
@@ -78,7 +91,9 @@ class BookingManager:
             allocated = self.find_custom_seats(start_row, start_col, tickets)
             self.bookings[booking_id] = allocated
             self.available_tickets -= tickets
-            logger.info(f"Booking {booking_id} confirmed with custom seats, {self.available_tickets} remaining")
+            logger.info(
+                f"Booking {booking_id} confirmed with custom seats, {self.available_tickets} remaining"
+            )
             print(f"Booking id: {booking_id} confirmed.")
             break
 
@@ -89,7 +104,7 @@ class BookingManager:
                 logger.warning(f"Invalid seat format (too short): {selected_seat}")
                 self.console.print(click.style("Invalid choice.", fg="yellow"))
                 selected_seat = click.prompt(
-                    click.style("Please enter valid seat no", fg="cyan"),
+                    click.style("Please enter valid seat no", fg="yellow"),
                     default="",
                     show_default=False,
                 ).strip()
@@ -97,30 +112,52 @@ class BookingManager:
             start_row = ord(selected_seat[0].upper()) - 65
             seat_num_text = selected_seat[1:]
             if not seat_num_text.isdigit():
-                logger.warning(f"Invalid seat format (non-numeric suffix): {selected_seat}")
-                self.console.print(click.style("Invalid choice. Please enter valid seat no.", fg="yellow"))
+                logger.warning(
+                    f"Invalid seat format (non-numeric suffix): {selected_seat}"
+                )
+                self.console.print(
+                    click.style(
+                        "Invalid choice. Please enter valid seat no.", fg="yellow"
+                    )
+                )
                 selected_seat = click.prompt(
-                    click.style("Please enter valid seat no", fg="cyan"),
+                    click.style("Please enter valid seat no", fg="yellow"),
                     default="",
                     show_default=False,
                 ).strip()
                 continue
             start_col = int(seat_num_text) - 1
             logger.debug(f"Parsed seat: row={start_row}, col={start_col}")
-            if start_row < 0 or start_row >= self.rows or start_col < 0 or start_col >= self.seats_per_row:
-                logger.warning(f"Seat out of range: row={start_row} (max {self.rows-1}), col={start_col} (max {self.seats_per_row-1})")
-                self.console.print(click.style("Invalid choice. Please enter valid seat no.", fg="yellow"))
+            if (
+                start_row < 0
+                or start_row >= self.rows
+                or start_col < 0
+                or start_col >= self.seats_per_row
+            ):
+                logger.warning(
+                    f"Seat out of range: row={start_row} (max {self.rows - 1}), col={start_col} (max {self.seats_per_row - 1})"
+                )
+                self.console.print(
+                    click.style(
+                        "Invalid choice. Please enter valid seat no.", fg="yellow"
+                    )
+                )
                 selected_seat = click.prompt(
-                    click.style("Please enter valid seat no", fg="cyan"),
+                    click.style("Please enter valid seat no", fg="yellow"),
                     default="",
                     show_default=False,
                 ).strip()
                 continue
             if self.map[start_row][start_col] == "#":
                 logger.warning(f"Seat already booked: {selected_seat}")
-                self.console.print(click.style(f"Seat {selected_seat} is already booked. Please enter valid seat no.", fg="yellow"))
+                self.console.print(
+                    click.style(
+                        f"Seat {selected_seat} is already booked. Please enter valid seat no.",
+                        fg="yellow",
+                    )
+                )
                 selected_seat = click.prompt(
-                    click.style("Please enter valid seat no", fg="cyan"),
+                    click.style("Please enter valid seat no", fg="yellow"),
                     default="",
                     show_default=False,
                 ).strip()
@@ -129,7 +166,9 @@ class BookingManager:
             logger.debug(f"Valid seat confirmed: ({start_row}, {start_col})")
             return start_row, start_col
 
-    def find_default_seats(self, tickets: int) -> tuple[list[tuple[int, int]], list[list[str]]]:
+    def find_default_seats(
+        self, tickets: int
+    ) -> tuple[list[tuple[int, int]], list[list[str]]]:
         logger.debug(f"Finding default seats for {tickets} tickets")
         allocated = []
         remaining = tickets
@@ -139,8 +178,12 @@ class BookingManager:
                 logger.debug(f"All {tickets} seats allocated")
                 break
 
-            available_in_row = [c for c in range(self.seats_per_row) if self.map[r][c] == "."]
-            logger.debug(f"Row {r}: {len(available_in_row)} available seats, need {remaining}")
+            available_in_row = [
+                c for c in range(self.seats_per_row) if self.map[r][c] == "."
+            ]
+            logger.debug(
+                f"Row {r}: {len(available_in_row)} available seats, need {remaining}"
+            )
 
             if not available_in_row:
                 logger.debug(f"Row {r} is full, skipping")
@@ -173,10 +216,14 @@ class BookingManager:
         logger.debug(f"Confirming booking for seats: {allocated_seats}")
         for r, c in allocated_seats:
             self.map[r][c] = "#"
-        logger.debug(f"Seat map updated after confirmation")
+        logger.debug("Seat map updated after confirmation")
 
-    def find_custom_seats(self, start_row: int, start_col: int, tickets: int) -> list[tuple[int, int]]:
-        logger.debug(f"Finding custom seats from ({start_row}, {start_col}) for {tickets} tickets")
+    def find_custom_seats(
+        self, start_row: int, start_col: int, tickets: int
+    ) -> list[tuple[int, int]]:
+        logger.debug(
+            f"Finding custom seats from ({start_row}, {start_col}) for {tickets} tickets"
+        )
         allocated: list[tuple[int, int]] = []
         remaining = tickets
         for c in range(start_col, self.seats_per_row):
@@ -188,7 +235,9 @@ class BookingManager:
                 break
 
         if remaining > 0:
-            logger.debug(f"Need {remaining} more seats, using default allocation for overflow")
+            logger.debug(
+                f"Need {remaining} more seats, using default allocation for overflow"
+            )
             overflow_allocated, _ = self.find_default_seats(remaining)
             self.confirm_booking(overflow_allocated)
             allocated.extend(overflow_allocated)
@@ -196,7 +245,9 @@ class BookingManager:
         logger.debug(f"Custom allocation complete: {allocated}")
         return allocated
 
-    def print_seats(self, _booking_id: str, _tickets: int, copy_map: list[list[str]]) -> None:
+    def print_seats(
+        self, _booking_id: str, _tickets: int, copy_map: list[list[str]]
+    ) -> None:
         print("Selected seats:")
         print("S C R E E N".center(self.seats_per_row * 3))
         print("-" * (self.seats_per_row * 3))
@@ -211,7 +262,9 @@ class BookingManager:
         print()
 
 
-def greet(name: str, greeting: str = "Hello", uppercase: bool = False, count: int = 1) -> str:
+def greet(
+    name: str, greeting: str = "Hello", uppercase: bool = False, count: int = 1
+) -> str:
     """Generate a greeting message.
 
     Args:
@@ -263,7 +316,9 @@ def process_data(
 
     supported_formats = {"json", "csv", "text"}
     if output_format not in supported_formats:
-        raise ValueError(f"Unsupported format: {output_format}. Use one of {supported_formats}")
+        raise ValueError(
+            f"Unsupported format: {output_format}. Use one of {supported_formats}"
+        )
 
     rows = _read_rows(path)
     destination = _write_output(rows, output_file, output_format)
@@ -295,7 +350,9 @@ def _read_rows(path: Path) -> list[dict[str, str]]:
             return [{"line": line.strip()} for line in f if line.strip()]
 
 
-def _write_output(rows: list[dict[str, str]], output_file: str | None, output_format: str) -> str:
+def _write_output(
+    rows: list[dict[str, str]], output_file: str | None, output_format: str
+) -> str:
     """Write processed data to output.
 
     Args:

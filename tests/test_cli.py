@@ -31,7 +31,9 @@ class TestCLIVersion:
         assert result.exit_code == 0
         assert "Please define movie title and seating map" in result.output
 
-    def test_interactive_invalid_three_values_then_success(self, runner: CliRunner) -> None:
+    def test_interactive_invalid_three_values_then_success(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="only_two\nInception 2 2\n3\n")
         assert result.exit_code == 0
         assert "exactly 3 values" in result.output
@@ -41,12 +43,16 @@ class TestCLIVersion:
         assert result.exit_code == 0
         assert "Maximum rows allowed 26" in result.output
 
-    def test_interactive_seats_per_row_over_limit_then_success(self, runner: CliRunner) -> None:
+    def test_interactive_seats_per_row_over_limit_then_success(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="M 5 51\nInception 2 2\n3\n")
         assert result.exit_code == 0
         assert "Maximum seats per row allowed 50" in result.output
 
-    def test_interactive_invalid_numeric_layout_then_success(self, runner: CliRunner) -> None:
+    def test_interactive_invalid_numeric_layout_then_success(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="M x y\nInception 2 2\n3\n")
         assert result.exit_code == 0
         assert "Error:" in result.output
@@ -62,23 +68,31 @@ class TestCLIVersion:
         assert result.exit_code == 0
         assert "Invalid choice" in result.output
 
-    def test_interactive_blank_menu_choice_ignored_then_exit(self, runner: CliRunner) -> None:
+    def test_interactive_blank_menu_choice_ignored_then_exit(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="Inception 2 2\n\n3\n")
         assert result.exit_code == 0
 
-    def test_interactive_book_one_ticket_accept_default_then_exit(self, runner: CliRunner) -> None:
+    def test_interactive_book_one_ticket_accept_default_then_exit(
+        self, runner: CliRunner
+    ) -> None:
         # seat map -> menu book -> 1 ticket -> blank accept seat -> main menu exit
         result = runner.invoke(app, input="Inception 2 5\n1\n1\n\n3\n")
         assert result.exit_code == 0
         assert "Successfully reserved" in result.output
         assert "GIC0001" in result.output
 
-    def test_interactive_book_invalid_ticket_count_then_success(self, runner: CliRunner) -> None:
+    def test_interactive_book_invalid_ticket_count_then_success(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="Inception 2 2\n1\nxx\n1\n\n3\n")
         assert result.exit_code == 0
         assert "valid number" in result.output
 
-    def test_interactive_book_too_many_tickets_then_success(self, runner: CliRunner) -> None:
+    def test_interactive_book_too_many_tickets_then_success(
+        self, runner: CliRunner
+    ) -> None:
         result = runner.invoke(app, input="Inception 2 2\n1\n99\n1\n\n3\n")
         assert result.exit_code == 0
         assert "Only" in result.output and "available" in result.output
@@ -93,7 +107,9 @@ class TestCLIVersion:
         assert result.exit_code == 0
         assert "Invalid booking id" in result.output
 
-    def test_interactive_book_blank_ticket_prompt_then_confirm(self, runner: CliRunner) -> None:
+    def test_interactive_book_blank_ticket_prompt_then_confirm(
+        self, runner: CliRunner
+    ) -> None:
         # Blank on ticket prompt returns to menu, then book 1 ticket and accept seat
         result = runner.invoke(app, input="Inception 2 2\n1\n\n1\n1\n\n3\n")
         assert result.exit_code == 0
@@ -184,9 +200,13 @@ class TestProcessCommand:
         assert "Processed 2 rows" in result.output
 
     @pytest.mark.skip(reason="process command removed from CLI")
-    def test_process_with_output(self, runner: CliRunner, tmp_text_file, tmp_path) -> None:
+    def test_process_with_output(
+        self, runner: CliRunner, tmp_text_file, tmp_path
+    ) -> None:
         output = tmp_path / "out.txt"
-        result = runner.invoke(app, ["process", str(tmp_text_file), "--output", str(output)])
+        result = runner.invoke(
+            app, ["process", str(tmp_text_file), "--output", str(output)]
+        )
         assert result.exit_code == 0
 
     @pytest.mark.skip(reason="process command removed from CLI")

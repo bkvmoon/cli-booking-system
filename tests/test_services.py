@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import click
 import pytest
 
@@ -72,7 +73,9 @@ class TestProcessData:
         result = process_data(input_file=str(tmp_text_file))
         assert result["rows"] == 3
 
-    def test_process_with_json_output(self, tmp_json_file: Path, tmp_path: Path) -> None:
+    def test_process_with_json_output(
+        self, tmp_json_file: Path, tmp_path: Path
+    ) -> None:
         output = tmp_path / "out.json"
         result = process_data(
             input_file=str(tmp_json_file),
@@ -210,7 +213,9 @@ class TestBookingManager:
         manager = BookingManager(title="T", rows=2, seats_per_row=3)
         assert manager.get_valid_seat_no("B2") == (1, 1)
 
-    def test_get_valid_seat_no_retries_on_short_input(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_valid_seat_no_retries_on_short_input(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="T", rows=2, seats_per_row=3)
         answers = iter(["x", "A1"])
 
@@ -220,7 +225,9 @@ class TestBookingManager:
         monkeypatch.setattr(click, "prompt", fake_prompt)
         assert manager.get_valid_seat_no("") == (0, 0)
 
-    def test_get_valid_seat_no_retries_on_non_digit_suffix(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_valid_seat_no_retries_on_non_digit_suffix(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="T", rows=2, seats_per_row=3)
         answers = iter(["A1"])
 
@@ -230,7 +237,9 @@ class TestBookingManager:
         monkeypatch.setattr(click, "prompt", fake_prompt)
         assert manager.get_valid_seat_no("Axx") == (0, 0)
 
-    def test_get_valid_seat_no_retries_on_out_of_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_valid_seat_no_retries_on_out_of_range(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="T", rows=2, seats_per_row=3)
         answers = iter(["A1"])
 
@@ -240,7 +249,9 @@ class TestBookingManager:
         monkeypatch.setattr(click, "prompt", fake_prompt)
         assert manager.get_valid_seat_no("Z1") == (0, 0)
 
-    def test_get_valid_seat_no_retries_when_seat_booked(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_valid_seat_no_retries_when_seat_booked(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="T", rows=2, seats_per_row=3)
         manager.map[0][0] = "#"
         answers = iter(["A2"])
@@ -251,7 +262,9 @@ class TestBookingManager:
         monkeypatch.setattr(click, "prompt", fake_prompt)
         assert manager.get_valid_seat_no("A1") == (0, 1)
 
-    def test_book_ticket_accepts_default_allocation(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_book_ticket_accepts_default_allocation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="Inception", rows=2, seats_per_row=5)
         monkeypatch.setattr(click, "prompt", lambda *a, **k: "")
         before = manager.available_tickets
@@ -259,7 +272,9 @@ class TestBookingManager:
         assert manager.available_tickets == before - 1
         assert "GIC0001" in manager.bookings
 
-    def test_book_ticket_custom_start_seat(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_book_ticket_custom_start_seat(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         manager = BookingManager(title="T", rows=2, seats_per_row=4)
         monkeypatch.setattr(click, "prompt", lambda *a, **k: "A2")
         manager.book_ticket(1)
