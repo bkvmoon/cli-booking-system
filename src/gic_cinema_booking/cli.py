@@ -1,4 +1,9 @@
-"""CLI entry point using Click framework."""
+"""Command-line interface for the GIC Cinemas booking system.
+
+This module provides the CLI entry point using the Click framework. It handles
+interactive menu navigation for movie ticket booking, including seat map definition,
+ticket booking, and booking lookup functionality.
+"""
 
 import logging
 
@@ -34,7 +39,17 @@ logger = logging.getLogger(__name__)
 @click.version_option(version=__version__, prog_name="gic")
 @click.pass_context
 def app(ctx: click.Context) -> None:
-    """GIC Cinemas booking system."""
+    """Main entry point for the GIC Cinemas booking system.
+
+    This command group serves as the primary entry point for the CLI. If no
+    subcommand is provided, it launches the interactive menu for booking tickets.
+
+    Args:
+        ctx: The Click context object for command execution.
+
+    Returns:
+        None
+    """
     logger.info(
         f"Starting GIC Cinemas Booking System v{__version__} (debug={config.debug})"
     )
@@ -43,6 +58,17 @@ def app(ctx: click.Context) -> None:
 
 
 def _run_interactive_menu() -> None:
+    """Run the interactive menu for defining movie title and seating map.
+
+    This function prompts the user to enter the movie title and seating layout
+    in the format [Title] [Row] [SeatsPerRow]. It validates the input to ensure
+    the number of rows does not exceed 26 and seats per row does not exceed 50.
+    Once valid input is received, it creates a BookingManager instance and
+    delegates to the main menu options.
+
+    Returns:
+        None
+    """
     logger.debug("Starting interactive menu")
     while True:
         seat_map_input = click.prompt(
@@ -101,6 +127,18 @@ def _run_interactive_menu() -> None:
 
 
 def _interactive_menu_options(bookings: BookingManager) -> None:
+    """Display and handle the main menu options for the booking system.
+
+    This function presents the user with three options: book tickets, check
+    bookings, or exit. It loops until the user selects exit (option 3). Blank
+    input is ignored and the menu is redisplayed.
+
+    Args:
+        bookings: The BookingManager instance containing the current state.
+
+    Returns:
+        None
+    """
     logger.debug(f"Entering main menu for {bookings.title}")
     while True:
         console.print("\n[bold cyan]Welcome to GIC Cinemas[/bold cyan]")
@@ -135,6 +173,19 @@ def _interactive_menu_options(bookings: BookingManager) -> None:
 
 
 def _interactive_book_tickets(bookings: BookingManager) -> None:
+    """Handle the interactive ticket booking flow.
+
+    This function prompts the user for the number of tickets to book. It validates
+    that the input is a valid number and that sufficient seats are available.
+    If validation passes, it delegates to the BookingManager to process the booking.
+    Blank input returns to the main menu.
+
+    Args:
+        bookings: The BookingManager instance to handle the booking.
+
+    Returns:
+        None
+    """
     logger.debug("Entering ticket booking flow")
     while True:
         tickets = click.prompt(
@@ -179,6 +230,18 @@ def _interactive_book_tickets(bookings: BookingManager) -> None:
 
 
 def _interactive_check_bookings(bookings: BookingManager) -> None:
+    """Handle the interactive booking lookup flow.
+
+    This function prompts the user for a booking ID and displays the seat map
+    with the booked seats marked. If the booking ID is invalid, an error message
+    is displayed and the user is prompted again. Blank input returns to the main menu.
+
+    Args:
+        bookings: The BookingManager instance containing the booking data.
+
+    Returns:
+        None
+    """
     logger.debug("Entering booking check flow")
     while True:
         booking_id = click.prompt(

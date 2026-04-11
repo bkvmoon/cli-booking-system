@@ -1,4 +1,9 @@
-"""Business logic separated from CLI layer for testability."""
+"""Business logic module for the GIC Cinemas booking system.
+
+This module contains the core business logic separated from the CLI layer to
+ensure testability. It includes the BookingManager class for managing movie seat
+allocations, along with utility functions for data processing and greeting generation.
+"""
 
 from __future__ import annotations
 
@@ -23,9 +28,25 @@ logger = logging.getLogger(__name__)
 
 
 class BookingManager:
-    """In-memory booking manager for movie seats."""
+    """Manages in-memory seat bookings for movie theater reservations.
+
+    This class handles the allocation and tracking of seat bookings for a movie
+    theater. It provides methods for booking tickets with default or custom seat
+    selection, validating seat numbers, and displaying seat maps. The seat map
+    uses a grid system where rows are labeled A-Z and seats are numbered from 1.
+    """
 
     def __init__(self, title: str, rows: int, seats_per_row: int) -> None:
+        """Initialize a new BookingManager for a movie.
+
+        Args:
+            title: The name of the movie.
+            rows: The number of rows in the theater (must be at least 1).
+            seats_per_row: The number of seats per row (must be at least 1).
+
+        Raises:
+            ValueError: If rows or seats_per_row is less than 1.
+        """
         logger.debug(
             f"Initializing BookingManager: title={title}, rows={rows}, seats_per_row={seats_per_row}"
         )
@@ -46,13 +67,39 @@ class BookingManager:
         )
 
     def get_booking(self, booking_id: str) -> list[tuple[int, int]] | None:
+        """Retrieve the seat allocation for a given booking ID.
+
+        Args:
+            booking_id: The unique identifier for the booking.
+
+        Returns:
+            A list of (row, column) tuples representing the booked seats, or
+            None if the booking ID does not exist.
+        """
         return self.bookings.get(booking_id)
 
     def get_copy_all_bookings(self) -> list[list[str]]:
+        """Return a deep copy of the current seat map.
+
+        Returns:
+            A 2D list representing the seat map where '.' indicates an
+            available seat and '#' indicates a booked seat.
+        """
         return copy.deepcopy(self.map)
 
     def book_ticket(self, tickets: int) -> None:
-        """Allocate seats interactively and record the booking."""
+        """Allocate seats for a ticket booking interactively.
+
+        This method prompts the user to either accept the default seat allocation
+        or specify a custom starting seat. It validates the seat selection and
+        records the booking with a generated booking ID.
+
+        Args:
+            tickets: The number of tickets to book.
+
+        Raises:
+            ValueError: If the seat selection is invalid or seats are unavailable.
+        """
         logger.debug(f"Starting booking process for {tickets} tickets")
 
         while True:
@@ -98,6 +145,22 @@ class BookingManager:
             break
 
     def get_valid_seat_no(self, selected_seat: str) -> tuple[int, int]:
+        """Validate and convert a seat identifier to row and column indices.
+
+        This method prompts the user repeatedly until a valid seat identifier
+        is provided. The seat identifier must be in the format like 'A1', 'B5', etc.
+        where the letter represents the row (A-Z) and the number represents
+        the seat number (1-based).
+
+        Args:
+            selected_seat: The initial seat identifier to validate.
+
+        Returns:
+            A tuple of (row_index, column_index) representing the seat location.
+
+        Raises:
+            ValueError: If the seat format is invalid or the seat is out of range.
+        """
         logger.debug(f"Validating seat: {selected_seat}")
         while True:
             if len(selected_seat) < 2:
@@ -169,6 +232,20 @@ class BookingManager:
     def find_default_seats(
         self, tickets: int
     ) -> tuple[list[tuple[int, int]], list[list[str]]]:
+        """Find the optimal default seat allocation for a given number of tickets.
+
+        This method allocates seats starting from the center of the theater,
+        working outward to the sides, and filling rows from back to front.
+        This provides the best viewing experience for groups.
+
+        Args:
+            tickets: The number of seats to allocate.
+
+        Returns:
+            A tuple containing:
+                - A list of (row, column) tuples for the allocated seats.
+                - A copy of the seat map with allocated seats marked as 'o'.
+        """
         logger.debug(f"Finding default seats for {tickets} tickets")
         allocated = []
         remaining = tickets
@@ -213,6 +290,14 @@ class BookingManager:
         return allocated, copy_map
 
     def confirm_booking(self, allocated_seats: list[tuple[int, int]]) -> None:
+        """Mark the allocated seats as booked in the seat map.
+
+        Args:
+            allocated_seats: A list of (row, column) tuples to mark as booked.
+
+        Returns:
+            None
+        """
         logger.debug(f"Confirming booking for seats: {allocated_seats}")
         for r, c in allocated_seats:
             self.map[r][c] = "#"
@@ -221,6 +306,20 @@ class BookingManager:
     def find_custom_seats(
         self, start_row: int, start_col: int, tickets: int
     ) -> list[tuple[int, int]]:
+        """Find seats starting from a custom position for a given number of tickets.
+
+        This method allocates seats starting from the specified position and
+        moving right within the same row. If insufficient seats are available
+        in the row, it uses the default allocation method for the remaining tickets.
+
+        Args:
+            start_row: The row index to start allocation from.
+            start_col: The column index to start allocation from.
+            tickets: The number of seats to allocate.
+
+        Returns:
+            A list of (row, column) tuples for the allocated seats.
+        """
         logger.debug(
             f"Finding custom seats from ({start_row}, {start_col}) for {tickets} tickets"
         )
@@ -248,6 +347,20 @@ class BookingManager:
     def print_seats(
         self, _booking_id: str, _tickets: int, copy_map: list[list[str]]
     ) -> None:
+        """Display the seat map with booked seats highlighted.
+
+        This method prints a visual representation of the theater seating
+        arrangement, showing the screen at the top and marking booked seats
+        with '#' and selected seats with 'o'.
+
+        Args:
+            _booking_id: The booking ID (unused in current implementation).
+            _tickets: The number of tickets (unused in current implementation).
+            copy_map: The seat map to display.
+
+        Returns:
+            None
+        """
         print("Selected seats:")
         print("S C R E E N".center(self.seats_per_row * 3))
         print("-" * (self.seats_per_row * 3))
