@@ -62,7 +62,7 @@ class BookingManager:
         self.map = [["." for _ in range(seats_per_row)] for _ in range(rows)]
         self.bookings: dict[str, list[tuple[int, int]]] = {}
         self.console = Console()
-        logger.info(
+        logger.debug(
             f"BookingManager initialized with {self.available_tickets} total seats"
         )
 
@@ -101,15 +101,17 @@ class BookingManager:
             ValueError: If the seat selection is invalid or seats are unavailable.
         """
         logger.debug(f"Starting booking process for {tickets} tickets")
+        selected_seat: str = ""
+        seat_map = copy.deepcopy(self.map)
+        allocated, copy_map = self.find_default_seats(0, tickets, seat_map)
+        print(f"Successfully reserved {tickets} {self.title} tickets.")
 
         while True:
-            allocated, copy_map = self.find_default_seats(tickets)
             booking_id = f"GIC{len(self.bookings) + 1:04d}"
             logger.debug(
                 f"Generated booking ID: {booking_id}, allocated seats: {allocated}"
             )
-            print(f"Successfully reserved {tickets} {self.title} tickets.")
-            print(f"Booking id: {booking_id} {self.title} tickets.")
+           
             self.print_seats(booking_id, tickets, copy_map)
 
             selected_seat = click.prompt(
@@ -124,25 +126,20 @@ class BookingManager:
 
             if not selected_seat:
                 logger.debug("User accepted default seats")
-                self.confirm_booking(allocated)
-                self.bookings[booking_id] = allocated
-                self.available_tickets -= tickets
-                logger.info(
+                self.confirm_booking(booking_id, allocated)
+                logger.debug(
                     f"Booking {booking_id} confirmed with {len(allocated)} seats, {self.available_tickets} remaining"
                 )
-                print(f"Booking id: {booking_id} confirmed.")
                 break
-
-            logger.debug(f"User requested custom seat: {selected_seat}")
-            start_row, start_col = self.get_valid_seat_no(selected_seat)
-            allocated = self.find_custom_seats(start_row, start_col, tickets)
-            self.bookings[booking_id] = allocated
-            self.available_tickets -= tickets
-            logger.info(
-                f"Booking {booking_id} confirmed with custom seats, {self.available_tickets} remaining"
-            )
-            print(f"Booking id: {booking_id} confirmed.")
-            break
+            
+            else:
+                logger.debug(f"User requested custom seat: {selected_seat}")
+                start_row, start_col = self.get_valid_seat_no(selected_seat)
+                allocated, copy_map = self.find_custom_seats(start_row, start_col, tickets)
+                logger.debug(
+                    f"Booking {booking_id} confirmed with custom seats, {self.available_tickets} remaining"
+                )
+                continue
 
     def get_valid_seat_no(self, selected_seat: str) -> tuple[int, int]:
         """Validate and convert a seat identifier to row and column indices.
@@ -230,7 +227,7 @@ class BookingManager:
             return start_row, start_col
 
     def find_default_seats(
-        self, tickets: int
+        self, start_row: int, tickets: int, copy_map
     ) -> tuple[list[tuple[int, int]], list[list[str]]]:
         """Find the optimal default seat allocation for a given number of tickets.
 
@@ -239,7 +236,9 @@ class BookingManager:
         This provides the best viewing experience for groups.
 
         Args:
+            start_row: The starting row for allocation.
             tickets: The number of seats to allocate.
+            copy_map: The copy of the seat map to modify.
 
         Returns:
             A tuple containing:
@@ -249,8 +248,7 @@ class BookingManager:
         logger.debug(f"Finding default seats for {tickets} tickets")
         allocated = []
         remaining = tickets
-        copy_map = copy.deepcopy(self.map)
-        for r in range(self.rows):
+        for r in range(start_row, self.rows):
             if remaining <= 0:
                 logger.debug(f"All {tickets} seats allocated")
                 break
@@ -289,23 +287,29 @@ class BookingManager:
         logger.debug(f"Default allocation complete: {allocated}")
         return allocated, copy_map
 
-    def confirm_booking(self, allocated_seats: list[tuple[int, int]]) -> None:
+    def confirm_booking(self, booking_id: str, allocated_seats: list[tuple[int, int]]) -> None:
         """Mark the allocated seats as booked in the seat map.
 
         Args:
+            booking_id: The booking ID to associate with the seats.
             allocated_seats: A list of (row, column) tuples to mark as booked.
 
         Returns:
             None
         """
         logger.debug(f"Confirming booking for seats: {allocated_seats}")
+
         for r, c in allocated_seats:
             self.map[r][c] = "#"
+
+        self.bookings[booking_id] = allocated_seats
+        self.available_tickets -= len(allocated_seats)
+        print(f"Booking id: {booking_id} confirmed.")
         logger.debug("Seat map updated after confirmation")
 
     def find_custom_seats(
         self, start_row: int, start_col: int, tickets: int
-    ) -> list[tuple[int, int]]:
+    ) -> tuple[list[tuple[int, int]], list[list[str]]]:
         """Find seats starting from a custom position for a given number of tickets.
 
         This method allocates seats starting from the specified position and
@@ -325,9 +329,10 @@ class BookingManager:
         )
         allocated: list[tuple[int, int]] = []
         remaining = tickets
+        copy_map = copy.deepcopy(self.map)
         for c in range(start_col, self.seats_per_row):
-            if remaining > 0 and self.map[start_row][c] == ".":
-                self.map[start_row][c] = "#"
+            if remaining > 0 and copy_map[start_row][c] == ".":
+                copy_map[start_row][c] = "o"
                 allocated.append((start_row, c))
                 remaining -= 1
             elif remaining == 0:
@@ -337,12 +342,20 @@ class BookingManager:
             logger.debug(
                 f"Need {remaining} more seats, using default allocation for overflow"
             )
-            overflow_allocated, _ = self.find_default_seats(remaining)
-            self.confirm_booking(overflow_allocated)
+            overflow_allocated, _ = self.find_default_seats(start_row + 1, remaining, copy_map)
+            copy_map = [row_a + row_b for row_a, row_b in zip(copy_map, _)]
             allocated.extend(overflow_allocated)
 
+            if (remaining != len(overflow_allocated)):
+                # This is the key edge-case handling if the overflow allocation also fails
+                logger.debug(f"Not enough seats available from row {chr(65 + start_row)} onwards")
+                raise ValueError(
+                    f"Not enough seats available from row {chr(65 + start_row)} "
+                    f"onwards. Could not allocate {tickets - remaining} / {tickets} seats."
+                )
+                
         logger.debug(f"Custom allocation complete: {allocated}")
-        return allocated
+        return allocated, copy_map
 
     def print_seats(
         self, _booking_id: str, _tickets: int, copy_map: list[list[str]]
@@ -361,6 +374,7 @@ class BookingManager:
         Returns:
             None
         """
+        print(f"Booking id: {_booking_id}")
         print("Selected seats:")
         print("S C R E E N".center(self.seats_per_row * 3))
         print("-" * (self.seats_per_row * 3))

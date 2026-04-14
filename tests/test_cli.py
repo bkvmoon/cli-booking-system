@@ -95,7 +95,7 @@ class TestCLIVersion:
     ) -> None:
         result = runner.invoke(app, input="Inception 2 2\n1\n99\n1\n\n3\n")
         assert result.exit_code == 0
-        assert "Only" in result.output and "available" in result.output
+        assert "only" in result.output and "available" in result.output
 
     def test_interactive_check_booking_flow(self, runner: CliRunner) -> None:
         result = runner.invoke(app, input="Inception 2 2\n1\n1\n\n2\nGIC0001\n3\n")

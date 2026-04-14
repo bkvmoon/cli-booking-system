@@ -50,7 +50,7 @@ def app(ctx: click.Context) -> None:
     Returns:
         None
     """
-    logger.info(
+    logger.debug(
         f"Starting GIC Cinemas Booking System v{__version__} (debug={config.debug})"
     )
     if ctx.invoked_subcommand is None:
@@ -114,7 +114,7 @@ def _run_interactive_menu() -> None:
             bookings = BookingManager(
                 title=movie_title, rows=rows, seats_per_row=seats_per_row
             )
-            logger.info(
+            logger.debug(
                 f"Created BookingManager for {movie_title} with {rows * seats_per_row} seats"
             )
         except ValueError as e:
@@ -164,7 +164,7 @@ def _interactive_menu_options(bookings: BookingManager) -> None:
             logger.debug("User selected Check bookings")
             _interactive_check_bookings(bookings)
         elif choice == "3":
-            logger.info("User selected Exit")
+            logger.debug("User selected Exit")
             console.print("[green]Thank you for using GIC Cinemas system. Bye![/green]")
             return
         else:
@@ -202,7 +202,7 @@ def _interactive_book_tickets(bookings: BookingManager) -> None:
             return
 
         if not tickets.isdigit():
-            logger.warning(f"Invalid ticket number: {tickets}")
+            logger.debug(f"Invalid ticket number: {tickets}")
             console.print(
                 f"[red]Enter a valid number of tickets "
                 f"({bookings.available_tickets} seats available).[/red]"
@@ -210,18 +210,18 @@ def _interactive_book_tickets(bookings: BookingManager) -> None:
             continue
 
         if int(tickets) > bookings.available_tickets:
-            logger.warning(
+            logger.debug(
                 f"Requested tickets {tickets} exceed available {bookings.available_tickets}"
             )
             console.print(
-                f"[red]Only {bookings.available_tickets} seat(s) available.[/red]"
+                f"[red]Sorry, there are only {bookings.available_tickets} seat(s) available.[/red]"
             )
             continue
 
         try:
-            logger.info(f"Booking {tickets} tickets for {bookings.title}")
+            logger.debug(f"Booking {tickets} tickets for {bookings.title}")
             bookings.book_ticket(tickets=int(tickets))
-            logger.info("Booking completed successfully")
+            logger.debug("Booking completed successfully")
             return
         except ValueError as e:
             logger.error(f"Booking failed: {e}")
@@ -265,10 +265,12 @@ def _interactive_check_bookings(bookings: BookingManager) -> None:
                 continue
 
             seat_map = bookings.get_copy_all_bookings()
-            for r, c in allocated:
-                seat_map[r][c] = "o"
+            for r in range(bookings.rows):
+                for c in range(bookings.seats_per_row):
+                    if (r, c) not in allocated and seat_map[r][c] == "#":
+                        seat_map[r][c] = "o"
 
-            logger.info(f"Displaying booking {booking_id} with {len(allocated)} seats")
+            logger.debug(f"Displaying booking {booking_id} with {len(allocated)} seats")
             console.print(
                 click.style(f"[bold]Booking id:[/bold] {booking_id}", fg="cyan")
             )
