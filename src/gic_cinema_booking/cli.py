@@ -6,7 +6,6 @@ ticket booking, and booking lookup functionality.
 """
 
 import logging
-
 import click
 
 try:

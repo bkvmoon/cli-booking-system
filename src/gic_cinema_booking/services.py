@@ -8,8 +8,6 @@ allocations, along with utility functions for data processing and greeting gener
 from __future__ import annotations
 
 import copy
-import csv
-import json
 import logging
 from pathlib import Path
 
@@ -208,20 +206,6 @@ class BookingManager:
                     show_default=False,
                 ).strip()
                 continue
-            if self.map[start_row][start_col] == "#":
-                logger.warning(f"Seat already booked: {selected_seat}")
-                self.console.print(
-                    click.style(
-                        f"Seat {selected_seat} is already booked. Please enter valid seat no.",
-                        fg="yellow",
-                    )
-                )
-                selected_seat = click.prompt(
-                    click.style("Please enter valid seat no", fg="yellow"),
-                    default="",
-                    show_default=False,
-                ).strip()
-                continue
 
             logger.debug(f"Valid seat confirmed: ({start_row}, {start_col})")
             return start_row, start_col
@@ -387,126 +371,3 @@ class BookingManager:
         for c in range(self.seats_per_row):
             print(f"{c + 1}", end="  ")
         print()
-
-
-def greet(
-    name: str, greeting: str = "Hello", uppercase: bool = False, count: int = 1
-) -> str:
-    """Generate a greeting message.
-
-    Args:
-        name: The name to greet.
-        greeting: The greeting word to use.
-        uppercase: Whether to uppercase the output.
-        count: Number of times to repeat the greeting.
-
-    Returns:
-        The formatted greeting string.
-
-    Raises:
-        ValueError: If count is less than 1 or name is empty.
-    """
-    if not name.strip():
-        raise ValueError("Name cannot be empty")
-    if count < 1:
-        raise ValueError("Count must be at least 1")
-
-    message = f"{greeting}, {name}!"
-    if uppercase:
-        message = message.upper()
-
-    return "\n".join([message] * count)
-
-
-def process_data(
-    input_file: str,
-    output_file: str | None = None,
-    output_format: str = "text",
-) -> dict[str, str | int]:
-    """Process data from an input file.
-
-    Args:
-        input_file: Path to the input file.
-        output_file: Optional path for output file.
-        output_format: Output format (json, csv, text).
-
-    Returns:
-        Dict with 'rows' count and 'destination' path.
-
-    Raises:
-        FileNotFoundError: If input_file does not exist.
-        ValueError: If output_format is not supported.
-    """
-    path = Path(input_file)
-    if not path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_file}")
-
-    supported_formats = {"json", "csv", "text"}
-    if output_format not in supported_formats:
-        raise ValueError(
-            f"Unsupported format: {output_format}. Use one of {supported_formats}"
-        )
-
-    rows = _read_rows(path)
-    destination = _write_output(rows, output_file, output_format)
-
-    return {"rows": len(rows), "destination": destination}
-
-
-def _read_rows(path: Path) -> list[dict[str, str]]:
-    """Read rows from a file (supports JSON and CSV).
-
-    Args:
-        path: Path to the input file.
-
-    Returns:
-        List of row dictionaries.
-    """
-    suffix = path.suffix.lower()
-
-    if suffix == ".json":
-        with path.open() as f:
-            data = json.load(f)
-            return data if isinstance(data, list) else [data]
-    elif suffix == ".csv":
-        with path.open(newline="") as f:
-            reader = csv.DictReader(f)
-            return list(reader)
-    else:
-        with path.open() as f:
-            return [{"line": line.strip()} for line in f if line.strip()]
-
-
-def _write_output(
-    rows: list[dict[str, str]], output_file: str | None, output_format: str
-) -> str:
-    """Write processed data to output.
-
-    Args:
-        rows: Data rows to write.
-        output_file: Optional output file path.
-        output_format: Format to write in.
-
-    Returns:
-        Destination description string.
-    """
-    if output_file is None:
-        return "stdout"
-
-    out_path = Path(output_file)
-
-    if output_format == "json":
-        with out_path.open("w") as f:
-            json.dump(rows, f, indent=2)
-    elif output_format == "csv":
-        if rows:
-            with out_path.open("w", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=rows[0].keys())
-                writer.writeheader()
-                writer.writerows(rows)
-    else:
-        with out_path.open("w") as f:
-            for row in rows:
-                f.write(f"{row}\n")
-
-    return str(out_path)
